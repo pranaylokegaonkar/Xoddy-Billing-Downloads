@@ -29,11 +29,11 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           if ($env:PAYLOAD_HASH -notmatch '^[a-f0-9]{64}$') { throw "Invalid SHA-256." }
-          $release = gh release view v0.2.1 --json assets | ConvertFrom-Json
+          $release = gh release view v0.2.2 --json assets | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { throw "Release lookup failed." }
           New-Item -ItemType Directory -Force payload | Out-Null
           if ($release.assets.name -contains "XoddyBilling.exe") {
-            gh release download v0.2.1 --pattern XoddyBilling.exe --dir payload
+            gh release download v0.2.2 --pattern XoddyBilling.exe --dir payload
             if ($LASTEXITCODE -ne 0) { throw "Payload download failed." }
           } else {
             if (!$env:TRANSFER_URL.StartsWith("https://")) { throw "HTTPS transfer URL required." }
@@ -43,7 +43,7 @@ jobs:
           $hash = (Get-FileHash payload/XoddyBilling.exe -Algorithm SHA256).Hash.ToLower()
           if ($hash -ne $env:PAYLOAD_HASH) { throw "Unapproved payload hash. Publication refused." }
           if ($release.assets.name -notcontains "XoddyBilling.exe") {
-            gh release upload v0.2.1 payload/XoddyBilling.exe
+            gh release upload v0.2.2 payload/XoddyBilling.exe
             if ($LASTEXITCODE -ne 0) { throw "Public payload upload failed." }
           }
       - name: Build small setup executable
@@ -63,7 +63,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $hash = (Get-FileHash online-dist/XoddyBilling-Setup.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  XoddyBilling-Setup.exe" | Set-Content -Encoding ascii online-dist/SHA256SUMS.txt
-          gh release upload v0.2.1 online-dist/XoddyBilling-Setup.exe online-dist/SHA256SUMS.txt --clobber
+          gh release upload v0.2.2 online-dist/XoddyBilling-Setup.exe online-dist/SHA256SUMS.txt --clobber
           if ($LASTEXITCODE -ne 0) { throw "Installer upload failed." }
           $bytes = (Get-Item online-dist/XoddyBilling-Setup.exe).Length
           "### XoddyBilling-Setup.exe — $bytes bytes" >> $env:GITHUB_STEP_SUMMARY

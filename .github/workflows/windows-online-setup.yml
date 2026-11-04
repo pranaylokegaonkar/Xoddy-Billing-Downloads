@@ -1,0 +1,72 @@
+# Run in the PUBLIC binaries-only Xoddy-Billing-Downloads repository.
+# This workflow never checks out or publishes the private application source.
+name: Build online setup
+on:
+  workflow_dispatch:
+    inputs:
+      transfer_url:
+        description: "Temporary HTTPS location of the approved compiled payload; blank after first publication"
+        required: false
+        type: string
+permissions:
+  contents: write
+jobs:
+  setup:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PAYLOAD_HASH: 1eee986a9a575234f30b102df9ef2fba20fc21913cf8fc9e18fad71190a4feac
+      TRANSFER_URL: ${{ inputs.transfer_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish approved application binary
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $release = gh release view v0.2.0 --json assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "Release lookup failed." }
+          New-Item -ItemType Directory -Force payload | Out-Null
+          if ($release.assets.name -contains "XoddyBilling.exe") {
+            gh release download v0.2.0 --pattern XoddyBilling.exe --dir payload
+            if ($LASTEXITCODE -ne 0) { throw "Payload download failed." }
+          } else {
+            if (!$env:TRANSFER_URL.StartsWith("https://")) { throw "HTTPS transfer URL required." }
+            curl.exe --fail --location --retry 3 --output payload/XoddyBilling.exe "$env:TRANSFER_URL"
+            if ($LASTEXITCODE -ne 0) { throw "Payload transfer failed." }
+          }
+          $hash = (Get-FileHash payload/XoddyBilling.exe -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:PAYLOAD_HASH) { throw "Unapproved payload hash. Publication refused." }
+          if ($release.assets.name -notcontains "XoddyBilling.exe") {
+            gh release upload v0.2.0 payload/XoddyBilling.exe
+            if ($LASTEXITCODE -ne 0) { throw "Public payload upload failed." }
+          }
+      - name: Build small setup executable
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" online-installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed." }
+          $size = (Get-Item online-dist/XoddyBilling-Setup.exe).Length
+          if ($size -gt 10000000) { throw "Online installer must be under 10 MB." }
+          Write-Host "Setup size: $size bytes"
+      - name: Test download installation and native launch
+        shell: pwsh
+        run: ./verify-online-installer.ps1
+      - name: Publish verified setup
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $hash = (Get-FileHash online-dist/XoddyBilling-Setup.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  XoddyBilling-Setup.exe" | Set-Content -Encoding ascii online-dist/SHA256SUMS.txt
+          gh release upload v0.2.0 online-dist/XoddyBilling-Setup.exe online-dist/SHA256SUMS.txt --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Installer upload failed." }
+          $bytes = (Get-Item online-dist/XoddyBilling-Setup.exe).Length
+          "### XoddyBilling-Setup.exe — $bytes bytes" >> $env:GITHUB_STEP_SUMMARY
+          "Verified: payload download, checksum, installation and native application launch." >> $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XoddyBilling-Setup
+          path: online-dist/XoddyBilling-Setup.exe
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30

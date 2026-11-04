@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       payload_hash:
-        description: "SHA-256 of the approved Windows executable"
+        description: "SHA-256 of the approved application ZIP"
         required: true
         type: string
       transfer_url:
@@ -29,21 +29,21 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           if ($env:PAYLOAD_HASH -notmatch '^[a-f0-9]{64}$') { throw "Invalid SHA-256." }
-          $release = gh release view v0.2.2 --json assets | ConvertFrom-Json
+          $release = gh release view v0.2.3 --json assets | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { throw "Release lookup failed." }
           New-Item -ItemType Directory -Force payload | Out-Null
-          if ($release.assets.name -contains "XoddyBilling.exe") {
-            gh release download v0.2.2 --pattern XoddyBilling.exe --dir payload
+          if ($release.assets.name -contains "XoddyBilling-App.zip") {
+            gh release download v0.2.3 --pattern XoddyBilling-App.zip --dir payload
             if ($LASTEXITCODE -ne 0) { throw "Payload download failed." }
           } else {
             if (!$env:TRANSFER_URL.StartsWith("https://")) { throw "HTTPS transfer URL required." }
-            curl.exe --fail --location --retry 3 --output payload/XoddyBilling.exe "$env:TRANSFER_URL"
+            curl.exe --fail --location --retry 3 --output payload/XoddyBilling-App.zip "$env:TRANSFER_URL"
             if ($LASTEXITCODE -ne 0) { throw "Payload transfer failed." }
           }
-          $hash = (Get-FileHash payload/XoddyBilling.exe -Algorithm SHA256).Hash.ToLower()
+          $hash = (Get-FileHash payload/XoddyBilling-App.zip -Algorithm SHA256).Hash.ToLower()
           if ($hash -ne $env:PAYLOAD_HASH) { throw "Unapproved payload hash. Publication refused." }
-          if ($release.assets.name -notcontains "XoddyBilling.exe") {
-            gh release upload v0.2.2 payload/XoddyBilling.exe
+          if ($release.assets.name -notcontains "XoddyBilling-App.zip") {
+            gh release upload v0.2.3 payload/XoddyBilling-App.zip
             if ($LASTEXITCODE -ne 0) { throw "Public payload upload failed." }
           }
       - name: Build small setup executable
@@ -62,8 +62,8 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $hash = (Get-FileHash online-dist/XoddyBilling-Setup.exe -Algorithm SHA256).Hash.ToLower()
-          "$hash  XoddyBilling-Setup.exe" | Set-Content -Encoding ascii online-dist/SHA256SUMS.txt
-          gh release upload v0.2.2 online-dist/XoddyBilling-Setup.exe online-dist/SHA256SUMS.txt --clobber
+          @("$hash  XoddyBilling-Setup.exe", "$env:PAYLOAD_HASH  XoddyBilling-App.zip") | Set-Content -Encoding ascii online-dist/SHA256SUMS.txt
+          gh release upload v0.2.3 online-dist/XoddyBilling-Setup.exe online-dist/SHA256SUMS.txt --clobber
           if ($LASTEXITCODE -ne 0) { throw "Installer upload failed." }
           $bytes = (Get-Item online-dist/XoddyBilling-Setup.exe).Length
           "### XoddyBilling-Setup.exe — $bytes bytes" >> $env:GITHUB_STEP_SUMMARY

@@ -1,6 +1,8 @@
-#define MyAppVersion "0.2.0"
-#define PayloadURL "https://github.com/pranaylokegaonkar/Xoddy-Billing-Downloads/releases/download/v0.2.0/XoddyBilling.exe"
-#define PayloadHash "1eee986a9a575234f30b102df9ef2fba20fc21913cf8fc9e18fad71190a4feac"
+#define MyAppVersion "0.2.1"
+#define PayloadURL "https://github.com/pranaylokegaonkar/Xoddy-Billing-Downloads/releases/download/v0.2.1/XoddyBilling.exe"
+#ifndef PayloadHash
+  #error PayloadHash must be supplied from the verified Windows build
+#endif
 
 [Setup]
 AppId={{560C53E2-7BD4-42BF-81CB-F3AF9A0BCD12}

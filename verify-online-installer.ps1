@@ -21,7 +21,7 @@ if ($install.ExitCode -ne 0) {
 $exe = Join-Path $installDir "XoddyBilling.exe"
 if (!(Test-Path $exe)) { throw "No installed executable." }
 $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
-if ($hash -ne "1eee986a9a575234f30b102df9ef2fba20fc21913cf8fc9e18fad71190a4feac") {
+if (!$env:PAYLOAD_HASH -or $hash -ne $env:PAYLOAD_HASH) {
     throw "Installed executable hash mismatch."
 }
 $launcher = Start-Process $exe -PassThru

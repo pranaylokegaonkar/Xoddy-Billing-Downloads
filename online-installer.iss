@@ -1,5 +1,5 @@
-#define MyAppVersion "0.2.1"
-#define PayloadURL "https://github.com/pranaylokegaonkar/Xoddy-Billing-Downloads/releases/download/v0.2.1/XoddyBilling.exe"
+#define MyAppVersion "0.2.2"
+#define PayloadURL "https://github.com/pranaylokegaonkar/Xoddy-Billing-Downloads/releases/download/v0.2.2/XoddyBilling.exe"
 #ifndef PayloadHash
   #error PayloadHash must be supplied from the verified Windows build
 #endif
